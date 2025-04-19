@@ -1,0 +1,113 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # 推送 v* 标签时触发（如 v1.0.0）
+
+jobs:
+  build:
+    name: Build and Package
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: 
+          - { os: linux, arch: amd64, ext: "tar.gz" }
+          - { os: linux, arch: arm64, ext: "tar.gz" }
+          - { os: windows, arch: amd64, ext: "zip" }
+          - { os: darwin, arch: arm64, ext: "zip" }
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.platform.os }}
+          GOARCH: ${{ matrix.platform.arch }}
+          CGO_ENABLED: "0"  # 静态编译
+        run: |
+          mkdir -p dist
+          output_name="prompt2cmd"
+          if [ "${{ matrix.platform.os }}" = "windows" ]; then
+            output_name="$output_name.exe"
+          fi
+          go build -ldflags="-s -w" -o "dist/$output_name" ./cmd/prompt2cmd
+          
+          # 添加README和配置示例文件
+          cp README.md dist/ || true
+          cp .env.example dist/ || true
+
+      - name: Package artifacts
+        id: package
+        run: |
+          cd dist
+          ARTIFACT_NAME="${{ matrix.platform.os }}-${{ matrix.platform.arch }}"
+          if [ "${{ matrix.platform.ext }}" = "zip" ]; then
+            zip -r "../$ARTIFACT_NAME.zip" .
+            echo "package_path=$ARTIFACT_NAME.zip" >> $GITHUB_OUTPUT
+          else
+            tar -czvf "../$ARTIFACT_NAME.tar.gz" .
+            echo "package_path=$ARTIFACT_NAME.tar.gz" >> $GITHUB_OUTPUT
+          fi
+          cd ..
+          ls -la *.zip *.tar.gz || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          path: ${{ steps.package.outputs.package_path }}
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux AMD64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-amd64
+          path: .
+
+      - name: Download Linux ARM64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: .
+
+      - name: Download Windows AMD64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-amd64
+          path: .
+
+      - name: Download macOS ARM64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: darwin-arm64
+          path: .
+
+      - name: List files
+        run: ls -la
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            linux-amd64.tar.gz
+            linux-arm64.tar.gz
+            windows-amd64.zip
+            darwin-arm64.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

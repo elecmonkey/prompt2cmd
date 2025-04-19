@@ -1,0 +1,39 @@
+# 环境变量文件，包含敏感信息如API密钥
+.env
+.env.*
+
+# 编译后的二进制文件
+/bin/
+/build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# 测试和临时文件
+*.test
+*.tmp
+*.temp
+/tmp/
+
+# 日志文件
+*.log
+logs/
+
+# 依赖目录
+/vendor/
+
+# Go特定文件
+go.work
+
+# IDE和编辑器文件
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db 
