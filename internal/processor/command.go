@@ -19,13 +19,21 @@ type CommandProcessor interface {
 // OSCommandProcessor 操作系统命令处理器
 type OSCommandProcessor struct {
 	Platform string // windows, linux, darwin
+	UsePS    bool   // Windows下是否使用PowerShell
 }
 
 // NewOSCommandProcessor 创建一个新的操作系统命令处理器
 func NewOSCommandProcessor() *OSCommandProcessor {
-	return &OSCommandProcessor{
+	processor := &OSCommandProcessor{
 		Platform: runtime.GOOS,
 	}
+	
+	// Windows系统默认使用PowerShell
+	if processor.Platform == "windows" {
+		processor.UsePS = true
+	}
+	
+	return processor
 }
 
 // ProcessCommand 根据操作系统处理命令
@@ -34,19 +42,7 @@ func (p *OSCommandProcessor) ProcessCommand(command string) (string, error) {
 		return "", errors.New("命令不能为空")
 	}
 
-	// 根据操作系统调整命令
-	switch p.Platform {
-	case "windows":
-		// Windows系统中，一些命令需要特别处理
-		if strings.HasPrefix(command, "ls") {
-			command = strings.Replace(command, "ls", "dir", 1)
-		}
-		// 可以添加更多Windows特定的命令转换
-	case "darwin", "linux":
-		// Unix类系统命令通常兼容
-		// 但有些特殊情况也需处理
-	}
-
+	// 命令处理基本上交给LLM完成，这里只做简单调整
 	return command, nil
 }
 
@@ -59,8 +55,15 @@ func (p *OSCommandProcessor) ExecuteCommand(command string) (string, error) {
 	// 根据平台选择合适的shell
 	var cmd *exec.Cmd
 	if p.Platform == "windows" {
-		cmd = exec.Command("cmd", "/C", command)
+		if p.UsePS {
+			// 使用PowerShell
+			cmd = exec.Command("powershell", "-Command", command)
+		} else {
+			// 使用CMD（传统方式，保留以便兼容）
+			cmd = exec.Command("cmd", "/C", command)
+		}
 	} else {
+		// Linux/macOS 使用标准shell
 		cmd = exec.Command("sh", "-c", command)
 	}
 

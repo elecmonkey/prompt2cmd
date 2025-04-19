@@ -332,20 +332,78 @@ func (p *Provider) AuditExecutionResult(command string, result string, prompt st
 func buildSystemPrompt(currentPath string) string {
 	osType := runtime.GOOS
 	
+	// 为不同操作系统提供更具体的示例
+	osSpecificExamples := ""
+	shellInfo := ""
+	
+	switch osType {
+	case "windows":
+		shellInfo = "默认使用PowerShell环境"
+		osSpecificExamples = `
+Windows系统命令示例（PowerShell）：
+1. 列出目录内容：Get-ChildItem 或 ls
+2. 查找文件：Get-ChildItem -Recurse -Filter "file.txt" 或 where.exe file.txt
+3. 查看文件内容：Get-Content file.txt 或 cat file.txt
+4. 删除文件：Remove-Item file.txt 或 del file.txt
+5. 创建目录：New-Item -ItemType Directory -Name newdir 或 mkdir newdir
+6. 查找文本：Select-String -Pattern "text" -Path file.txt 或 findstr "text" file.txt
+7. 路径使用反斜杠或正斜杠：C:\\Users\\username\\Documents 或 C:/Users/username/Documents
+8. 环境变量使用$前缀：$env:USERPROFILE
+9. 管道操作使用 | 符号：Get-Process | Where-Object { $_.CPU -gt 10 }
+10. 条件语句：if ($true) { "True" } else { "False" }
+11. 循环：foreach ($item in $collection) { $item }
+12. 常用别名：cd, ls, rm, mv, cp (这些别名使PowerShell命令与Linux/macOS命令兼容)`
+	case "darwin":
+		shellInfo = "默认使用Bash环境"
+		osSpecificExamples = `
+macOS系统命令示例：
+1. 列出目录内容：ls -la
+2. 查找文件：find . -name "file.txt" 或 mdfind "file.txt"
+3. 查看文件内容：cat file.txt
+4. 删除文件：rm file.txt
+5. 创建目录：mkdir newdir
+6. 查找文本：grep "text" file.txt
+7. 路径使用正斜杠：/Users/username/Documents
+8. 环境变量使用$前缀：$HOME
+9. 管道操作使用 | 符号：ps aux | grep chrome
+10. 条件语句：if [ $count -gt 0 ]; then echo "True"; else echo "False"; fi
+11. 循环：for i in {1..5}; do echo $i; done
+12. 权限管理：chmod 755 file.sh`
+	default: // linux
+		shellInfo = "默认使用Bash环境"
+		osSpecificExamples = `
+Linux系统命令示例：
+1. 列出目录内容：ls -la
+2. 查找文件：find . -name "file.txt" 或 locate "file.txt"
+3. 查看文件内容：cat file.txt
+4. 删除文件：rm file.txt
+5. 创建目录：mkdir newdir
+6. 查找文本：grep "text" file.txt
+7. 路径使用正斜杠：/home/username/documents
+8. 环境变量使用$前缀：$HOME
+9. 管道操作使用 | 符号：ps aux | grep chrome
+10. 条件语句：if [ $count -gt 0 ]; then echo "True"; else echo "False"; fi
+11. 循环：for i in {1..5}; do echo $i; done
+12. 权限管理：chmod 755 file.sh`
+	}
+	
 	return fmt.Sprintf(`你是一个终端命令生成助手。你的任务是根据用户的自然语言描述，生成相应的终端命令。
-当前操作系统：%s
+当前操作系统：%s (%s)
 当前工作路径：%s
 
 请遵循以下规则：
 1. 只生成与用户需求相关的命令
 2. 提供命令的详细解释
 3. 考虑当前工作路径，生成合适的命令
-4. 要准确理解用户的真实意图，尤其是关于删除、修改等敏感操作
-5. 输出必须是有效的JSON格式，包含以下字段：
+4. 务必生成适用于当前操作系统(%s)的命令，不要生成其他操作系统的命令
+5. 要准确理解用户的真实意图，尤其是关于删除、修改等敏感操作
+6. 输出必须是有效的JSON格式，包含以下字段：
    - command: 生成的终端命令
    - explanation: 命令的详细解释
 
-示例：
+%s
+
+通用示例：
 用户需求："列出当前目录下的所有图片文件"
 {
   "command": "find . -type f -name \"*.jpg\" -o -name \"*.png\" -o -name \"*.gif\"",
@@ -356,5 +414,5 @@ func buildSystemPrompt(currentPath string) string {
 {
   "command": "rm *.c",
   "explanation": "删除当前目录下所有以.c为扩展名的文件。"
-}`, osType, currentPath)
+}`, osType, shellInfo, currentPath, osType, osSpecificExamples)
 } 

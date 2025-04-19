@@ -76,6 +76,11 @@ func findHistoryFile(filePath string) (string, error) {
 	return "", errors.New("无法确定历史记录文件路径")
 }
 
+// 用于记录警告信息
+func logWarning(message string) {
+	fmt.Fprintf(os.Stderr, "警告: %s\n", message)
+}
+
 // NewFileCommandHistory 创建一个新的文件命令历史记录
 func NewFileCommandHistory(filePath string, maxRecords int) (*FileCommandHistory, error) {
 	if maxRecords <= 0 {
@@ -85,49 +90,74 @@ func NewFileCommandHistory(filePath string, maxRecords int) (*FileCommandHistory
 	// 查找或创建历史文件
 	resolvedPath, err := findHistoryFile(filePath)
 	if err != nil {
-		return nil, err
+		logWarning(err.Error() + "，将使用空历史记录")
+		// 尝试使用默认路径
+		homeDir, _ := os.UserHomeDir()
+		if homeDir != "" {
+			resolvedPath = filepath.Join(homeDir, ".prompt2cmd_history")
+		} else {
+			resolvedPath = ".prompt2cmd_history" // 最后的退路
+		}
 	}
 
 	history := &FileCommandHistory{
 		filePath: resolvedPath,
 		MaxRecords: maxRecords,
+		records: []HistoryRecord{}, // 初始化为空数组
 	}
 
 	// 尝试从文件加载记录
+	loadSuccess := false
 	if _, err := os.Stat(resolvedPath); err == nil {
 		// 文件存在，尝试加载
 		file, err := os.ReadFile(resolvedPath)
 		if err != nil {
-			return nil, errors.New("读取历史记录文件失败: " + err.Error())
-		}
-
-		// 解析JSON
-		if len(file) > 0 {
+			logWarning("读取历史记录文件失败: " + err.Error() + "，将使用空历史记录")
+		} else if len(file) > 0 {
+			// 解析JSON
 			err = json.Unmarshal(file, &history.records)
 			if err != nil {
-				return nil, errors.New("解析历史记录失败: " + err.Error())
+				logWarning("解析历史记录失败: " + err.Error() + "，将使用空历史记录并备份旧文件")
+				
+				// 备份损坏的历史文件
+				backupPath := resolvedPath + ".backup." + time.Now().Format("20060102150405")
+				backupErr := os.Rename(resolvedPath, backupPath)
+				if backupErr == nil {
+					logWarning("已将损坏的历史记录文件备份到: " + backupPath)
+				}
+				
+				// 重置为空记录
+				history.records = []HistoryRecord{}
+			} else {
+				loadSuccess = true
 			}
+		}
+	}
+
+	// 如果成功加载，检查记录格式是否正确
+	if loadSuccess {
+		validRecords := make([]HistoryRecord, 0, len(history.records))
+		for _, record := range history.records {
+			if record.ID != "" && record.Prompt != "" && record.Command != "" {
+				validRecords = append(validRecords, record)
+			}
+		}
+		
+		// 如果有无效记录，更新并保存
+		if len(validRecords) != len(history.records) {
+			logWarning(fmt.Sprintf("发现 %d 条无效历史记录，已过滤", len(history.records) - len(validRecords)))
+			history.records = validRecords
+			// 保存清理后的记录
+			history.saveHistory()
 		}
 	}
 
 	return history, nil
 }
 
-// AddCommand 添加一条命令到历史记录
-func (h *FileCommandHistory) AddCommand(prompt, command string, executed bool) error {
-	// 创建新的历史记录
-	record := HistoryRecord{
-		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-		Prompt:    prompt,
-		Command:   command,
-		Executed:  executed,
-		Timestamp: time.Now().Format(time.RFC3339),
-	}
-
-	// 添加到记录数组
-	h.records = append(h.records, record)
-
-	// 确保记录数量不超过最大限制
+// saveHistory 保存历史记录到文件
+func (h *FileCommandHistory) saveHistory() error {
+	// 确保不超过最大记录数
 	if len(h.records) > h.MaxRecords {
 		h.records = h.records[len(h.records)-h.MaxRecords:]
 	}
@@ -153,8 +183,31 @@ func (h *FileCommandHistory) AddCommand(prompt, command string, executed bool) e
 	return nil
 }
 
+// AddCommand 添加一条命令到历史记录
+func (h *FileCommandHistory) AddCommand(prompt, command string, executed bool) error {
+	// 创建新的历史记录
+	record := HistoryRecord{
+		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+		Prompt:    prompt,
+		Command:   command,
+		Executed:  executed,
+		Timestamp: time.Now().Format(time.RFC3339),
+	}
+
+	// 添加到记录数组
+	h.records = append(h.records, record)
+
+	// 保存到文件
+	return h.saveHistory()
+}
+
 // GetHistory 获取最近的命令历史记录
 func (h *FileCommandHistory) GetHistory(limit int) ([]HistoryRecord, error) {
+	// 即使没有历史记录也返回空数组，而不是错误
+	if len(h.records) == 0 {
+		return []HistoryRecord{}, nil
+	}
+
 	if limit <= 0 || limit > len(h.records) {
 		limit = len(h.records)
 	}

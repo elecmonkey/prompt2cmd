@@ -52,8 +52,12 @@ func main() {
 	// 初始化历史记录
 	historyManager, err := history.NewFileCommandHistory("", cfg.MaxHistorySize)
 	if err != nil {
-		fmt.Printf("❌ 初始化历史记录失败: %s\n", err.Error())
-		os.Exit(1)
+		fmt.Printf("⚠️ 历史记录功能不可用: %s\n", err.Error())
+		fmt.Println("程序将继续运行，但不会记录命令历史")
+		// 创建一个临时的内存历史记录管理器
+		historyManager = &history.FileCommandHistory{
+			MaxRecords: cfg.MaxHistorySize,
+		}
 	}
 
 	// 初始化用户界面
@@ -108,8 +112,8 @@ func main() {
 		// 获取历史记录
 		historyRecords, err := historyManager.GetHistory(contextLimit)
 		if err != nil {
-			userInterface.DisplayError(err)
-			// 继续执行，但不使用上下文
+			fmt.Printf("⚠️ 无法获取历史记录: %s\n", err.Error())
+			fmt.Println("将继续生成命令，但不使用历史上下文")
 			historyRecords = []history.HistoryRecord{}
 		}
 
