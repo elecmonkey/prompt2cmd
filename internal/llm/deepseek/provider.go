@@ -43,8 +43,8 @@ type ChatMessage struct {
 
 // ExecutionAuditResult 命令执行审计结果
 type ExecutionAuditResult struct {
-	Success     bool   `json:"success"`      // 命令是否成功执行
-	Description string `json:"description"`  // 对执行结果的解释
+	Success     bool   `json:"success"`     // 命令是否成功执行
+	Description string `json:"description"` // 对执行结果的解释
 }
 
 // GenerateCommand 根据提示和上下文生成命令和解释
@@ -54,17 +54,17 @@ func (p *Provider) GenerateCommand(prompt string, historyRecords []history.Histo
 	if err != nil {
 		currentPath = "未知路径"
 	}
-	
+
 	// 获取用户主目录，将绝对路径转换为~形式更简洁
 	homeDir, err := os.UserHomeDir()
 	if err == nil && strings.HasPrefix(currentPath, homeDir) {
 		// 将用户主目录替换为~
 		currentPath = filepath.Join("~", strings.TrimPrefix(currentPath, homeDir))
 	}
-	
+
 	// 构建系统提示词，用于指导模型生成合适的命令
 	systemPrompt := buildSystemPrompt(currentPath)
-	
+
 	// 创建消息数组，实现多轮对话
 	messages := []ChatMessage{
 		{
@@ -81,14 +81,14 @@ func (p *Provider) GenerateCommand(prompt string, historyRecords []history.Histo
 			Role:    "user",
 			Content: fmt.Sprintf("当前路径：%s\n用户需求：%s", currentPath, record.Prompt),
 		})
-		
+
 		// 添加助手的回复（生成的命令）
 		messages = append(messages, ChatMessage{
 			Role:    "assistant",
 			Content: fmt.Sprintf("```\n%s\n```\n\n%s", record.Command, "已生成上述命令"),
 		})
 	}
-	
+
 	// 添加当前用户输入
 	enhancedPrompt := fmt.Sprintf("当前路径：%s\n用户需求：%s", currentPath, prompt)
 	messages = append(messages, ChatMessage{
@@ -207,7 +207,7 @@ func (p *Provider) AuditExecutionResult(command string, result string, prompt st
 	if strings.TrimSpace(result) == "" {
 		resultContent = "[无任何输出]"
 	}
-	
+
 	// 构建系统提示词，用于指导模型审计命令执行结果
 	systemPrompt := `你是一个命令执行结果审计专家。你需要根据执行结果判断命令是否成功执行。
 请分析以下信息：
@@ -331,28 +331,28 @@ func (p *Provider) AuditExecutionResult(command string, result string, prompt st
 // buildSystemPrompt 构建系统提示词
 func buildSystemPrompt(currentPath string) string {
 	osType := runtime.GOOS
-	
+
 	// 为不同操作系统提供更具体的示例
 	osSpecificExamples := ""
 	shellInfo := ""
-	
+
 	switch osType {
-	case "windows":
-		shellInfo = "默认使用PowerShell环境"
-		osSpecificExamples = `
-Windows系统命令示例（PowerShell）：
-1. 列出目录内容：Get-ChildItem 或 ls
-2. 查找文件：Get-ChildItem -Recurse -Filter "file.txt" 或 where.exe file.txt
-3. 查看文件内容：Get-Content file.txt 或 cat file.txt
-4. 删除文件：Remove-Item file.txt 或 del file.txt
-5. 创建目录：New-Item -ItemType Directory -Name newdir 或 mkdir newdir
-6. 查找文本：Select-String -Pattern "text" -Path file.txt 或 findstr "text" file.txt
-7. 路径使用反斜杠或正斜杠：C:\\Users\\username\\Documents 或 C:/Users/username/Documents
-8. 环境变量使用$前缀：$env:USERPROFILE
-9. 管道操作使用 | 符号：Get-Process | Where-Object { $_.CPU -gt 10 }
-10. 条件语句：if ($true) { "True" } else { "False" }
-11. 循环：foreach ($item in $collection) { $item }
-12. 常用别名：cd, ls, rm, mv, cp (这些别名使PowerShell命令与Linux/macOS命令兼容)`
+	// case "windows":
+	// 	shellInfo = "默认使用PowerShell环境"
+	// 	osSpecificExamples = `
+	// Windows系统命令示例（PowerShell）：
+	// 1. 列出目录内容：Get-ChildItem 或 ls
+	// 2. 查找文件：Get-ChildItem -Recurse -Filter "file.txt" 或 where.exe file.txt
+	// 3. 查看文件内容：Get-Content file.txt 或 cat file.txt
+	// 4. 删除文件：Remove-Item file.txt 或 del file.txt
+	// 5. 创建目录：New-Item -ItemType Directory -Name newdir 或 mkdir newdir
+	// 6. 查找文本：Select-String -Pattern "text" -Path file.txt 或 findstr "text" file.txt
+	// 7. 路径使用反斜杠或正斜杠：C:\\Users\\username\\Documents 或 C:/Users/username/Documents
+	// 8. 环境变量使用$前缀：$env:USERPROFILE
+	// 9. 管道操作使用 | 符号：Get-Process | Where-Object { $_.CPU -gt 10 }
+	// 10. 条件语句：if ($true) { "True" } else { "False" }
+	// 11. 循环：foreach ($item in $collection) { $item }
+	// 12. 常用别名：cd, ls, rm, mv, cp (这些别名使PowerShell命令与Linux/macOS命令兼容)`
 	case "darwin":
 		shellInfo = "默认使用Bash环境"
 		osSpecificExamples = `
@@ -386,7 +386,7 @@ Linux系统命令示例：
 11. 循环：for i in {1..5}; do echo $i; done
 12. 权限管理：chmod 755 file.sh`
 	}
-	
+
 	return fmt.Sprintf(`你是一个终端命令生成助手。你的任务是根据用户的自然语言描述，生成相应的终端命令。
 当前操作系统：%s (%s)
 当前工作路径：%s
@@ -415,4 +415,4 @@ Linux系统命令示例：
   "command": "rm *.c",
   "explanation": "删除当前目录下所有以.c为扩展名的文件。"
 }`, osType, shellInfo, currentPath, osType, osSpecificExamples)
-} 
+}

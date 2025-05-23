@@ -14,7 +14,6 @@ jobs:
         platform: 
           - { os: linux, arch: amd64, ext: "tar.gz" }
           - { os: linux, arch: arm64, ext: "tar.gz" }
-          - { os: windows, arch: amd64, ext: "zip" }
           - { os: darwin, arch: arm64, ext: "zip" }
     
     steps:
@@ -34,9 +33,6 @@ jobs:
         run: |
           mkdir -p dist
           output_name="prompt2cmd"
-          if [ "${{ matrix.platform.os }}" = "windows" ]; then
-            output_name="$output_name.exe"
-          fi
           go build -ldflags="-s -w" -o "dist/$output_name" ./cmd/prompt2cmd
           
           # 添加README和配置示例文件
@@ -84,12 +80,6 @@ jobs:
           name: linux-arm64
           path: .
 
-      - name: Download Windows AMD64 Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-amd64
-          path: .
-
       - name: Download macOS ARM64 Artifact
         uses: actions/download-artifact@v4
         with:
@@ -106,7 +96,6 @@ jobs:
           files: |
             linux-amd64.tar.gz
             linux-arm64.tar.gz
-            windows-amd64.zip
             darwin-arm64.zip
           generate_release_notes: true
         env:

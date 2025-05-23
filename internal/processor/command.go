@@ -11,7 +11,7 @@ import (
 type CommandProcessor interface {
 	// ProcessCommand 处理命令，返回处理后的命令和可能的错误
 	ProcessCommand(command string) (string, error)
-	
+
 	// ExecuteCommand 执行命令，返回执行结果和可能的错误
 	ExecuteCommand(command string) (string, error)
 }
@@ -27,12 +27,12 @@ func NewOSCommandProcessor() *OSCommandProcessor {
 	processor := &OSCommandProcessor{
 		Platform: runtime.GOOS,
 	}
-	
+
 	// Windows系统默认使用PowerShell
-	if processor.Platform == "windows" {
-		processor.UsePS = true
-	}
-	
+	// if processor.Platform == "windows" {
+	// 	processor.UsePS = true
+	// }
+
 	return processor
 }
 
@@ -54,18 +54,18 @@ func (p *OSCommandProcessor) ExecuteCommand(command string) (string, error) {
 
 	// 根据平台选择合适的shell
 	var cmd *exec.Cmd
-	if p.Platform == "windows" {
-		if p.UsePS {
-			// 使用PowerShell
-			cmd = exec.Command("powershell", "-Command", command)
-		} else {
-			// 使用CMD（传统方式，保留以便兼容）
-			cmd = exec.Command("cmd", "/C", command)
-		}
-	} else {
-		// Linux/macOS 使用标准shell
-		cmd = exec.Command("sh", "-c", command)
-	}
+	// if p.Platform == "windows" {
+	// 	if p.UsePS {
+	// 		// 使用PowerShell
+	// 		cmd = exec.Command("powershell", "-Command", command)
+	// 	} else {
+	// 		// 使用CMD（传统方式，保留以便兼容）
+	// 		cmd = exec.Command("cmd", "/C", command)
+	// 	}
+	// } else {
+	// Linux/macOS 使用标准shell
+	cmd = exec.Command("sh", "-c", command)
+	// }
 
 	// 设置命令的输出
 	output, err := cmd.CombinedOutput()
@@ -84,4 +84,4 @@ func IsCommandSafe(command string, dangerousCommands []string) bool {
 		}
 	}
 	return true
-} 
+}

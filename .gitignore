@@ -5,7 +5,6 @@
 # 编译后的二进制文件
 /bin/
 /build/
-*.exe
 *.exe~
 *.dll
 *.so
