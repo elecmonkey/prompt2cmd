@@ -21,7 +21,7 @@ Prompt2Cmd是一个终端工具，能够通过自然语言理解用户需求，�
 ### 前提条件
 
 - Go 1.16+
-- DeepSeek API密钥（需在[DeepSeek平台](https://platform.deepseek.com/api_keys)申请）
+- LLM API密钥（支持DeepSeek或Moonshot，需在对应平台申请）
 
 ### 安装步骤
 
@@ -43,11 +43,21 @@ cd prompt2cmd
 选择其中一个位置创建`.env`文件，内容如下：
 
 ```
-# DeepSeek API密钥 
-DEEPSEEK_API_KEY=your_api_key_here
+# LLM 提供商 (deepseek, moonshot, 默认为 deepseek)
+LLM_PROVIDER=deepseek
 
-# API基础URL
-DEEPSEEK_BASE_URL=https://api.deepseek.com
+# LLM API 密钥（必需）
+LLM_API_KEY=your_api_key_here
+
+# LLM API 基础URL（可选，有默认值）
+# DeepSeek: https://api.deepseek.com
+# Moonshot: https://api.moonshot.cn/v1
+LLM_BASE_URL=
+
+# LLM 模型名称（可选，有默认值）
+# DeepSeek: deepseek-chat
+# Moonshot: kimi-k2-0711-preview
+LLM_MODEL=
 
 # 应用配置
 MAX_HISTORY_SIZE=50
@@ -156,8 +166,10 @@ prompt2cmd
 
 | 配置项 | 描述 | 必需 | 默认值 |
 |-------|------|------|-------|
-| DEEPSEEK_API_KEY | DeepSeek API密钥 | 是 | 无 |
-| DEEPSEEK_BASE_URL | DeepSeek API基础URL | 否 | https://api.deepseek.com |
+| LLM_PROVIDER | LLM 提供商 (deepseek, moonshot) | 否 | deepseek |
+| LLM_API_KEY | LLM API 密钥 | 是 | 无 |
+| LLM_BASE_URL | LLM API 基础URL | 否 | deepseek: https://api.deepseek.com, moonshot: https://api.moonshot.cn/v1 |
+| LLM_MODEL | LLM 模型名称 | 否 | deepseek: deepseek-chat, moonshot: kimi-k2-0711-preview |
 | MAX_HISTORY_SIZE | 历史记录最大保存数量 | 否 | 50 |
 | USE_LOCAL_MODEL | 是否使用本地模型 | 否 | false |
 | LOCAL_MODEL_PATH | 本地模型路径 | 仅当USE_LOCAL_MODEL=true时必需 | 无 |
@@ -174,7 +186,7 @@ prompt2cmd
 - [ ] 支持本地模型
 - [ ] 改进TUI界面
 - [ ] 添加命令建议功能
-- [ ] 支持更多的LLM提供商
+- [x] 支持更多的LLM提供商
 - [ ] 实现插件系统
 
 ## 贡献
