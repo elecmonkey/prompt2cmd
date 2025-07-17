@@ -13,14 +13,16 @@ import (
 
 // Config 存储应用程序配置
 type Config struct {
-	APIKey            string
-	BaseURL           string
+	LLMProvider       string // deepseek, moonshot
+	LLMAPIKey         string
+	LLMBaseURL        string
+	LLMModel          string
 	UseLocalModel     bool
 	LocalModelPath    string
 	MaxHistorySize    int
 	DangerousCommands []string
 	// 添加一个配置文件路径，以便后续可能的配置保存
-	ConfigFile        string
+	ConfigFile string
 }
 
 // ConfigManager 接口定义配置管理器的行为
@@ -113,9 +115,15 @@ func (e *EnvConfigManager) LoadConfig() (*Config, error) {
 		fmt.Println("将使用环境变量或默认值...")
 	}
 
-	// 获取API密钥（必需）
-	config.APIKey = os.Getenv("DEEPSEEK_API_KEY")
-	if config.APIKey == "" {
+	// 获取LLM提供商（必需）
+	config.LLMProvider = os.Getenv("LLM_PROVIDER")
+	if config.LLMProvider == "" {
+		config.LLMProvider = "deepseek" // 默认使用deepseek
+	}
+
+	// 获取LLM API密钥（必需）
+	config.LLMAPIKey = os.Getenv("LLM_API_KEY")
+	if config.LLMAPIKey == "" {
 		// 尝试创建用户配置目录和示例配置
 		homeDir, _ := os.UserHomeDir()
 		if homeDir != "" {
@@ -125,13 +133,23 @@ func (e *EnvConfigManager) LoadConfig() (*Config, error) {
 				if _, err := os.Stat(exampleConfigPath); os.IsNotExist(err) {
 					// 创建示例配置文件
 					exampleConfig := `# Prompt2Cmd 配置文件示例
-# 在 https://platform.deepseek.com/api_keys 获取API密钥
+# 在 https://platform.deepseek.com/api_keys 或 https://platform.moonshot.cn/console/api-keys 获取API密钥
 
-# DeepSeek API密钥（必需）
-DEEPSEEK_API_KEY=your_api_key_here
+# LLM 提供商 (deepseek, moonshot, 默认为 deepseek)
+LLM_PROVIDER=deepseek
 
-# DeepSeek API基础URL（可选，有默认值）
-DEEPSEEK_BASE_URL=https://api.deepseek.com
+# LLM API 密钥（必需）
+LLM_API_KEY=your_api_key_here
+
+# LLM API 基础URL（可选，有默认值）
+# DeepSeek: https://api.deepseek.com
+# Moonshot: https://api.moonshot.cn/v1
+LLM_BASE_URL=
+
+# LLM 模型名称（可选，有默认值）
+# DeepSeek: deepseek-chat
+# Moonshot: kimi-k2-0711-preview
+LLM_MODEL=
 
 # 历史记录最大保存数量（可选，有默认值）
 MAX_HISTORY_SIZE=50
@@ -152,14 +170,36 @@ DANGEROUS_COMMANDS=rm -rf,rm,chmod,chown,mkfs,dd,mv,reboot,shutdown
 				}
 			}
 		}
-		
-		return nil, errors.New("未找到DEEPSEEK_API_KEY环境变量，这是必需的。请设置环境变量或在配置文件中提供")
+
+		return nil, errors.New("未找到LLM_API_KEY环境变量，这是必需的。请设置环境变量或在配置文件中提供")
 	}
 
-	// 获取基础URL
-	config.BaseURL = os.Getenv("DEEPSEEK_BASE_URL")
-	if config.BaseURL == "" {
-		config.BaseURL = "https://api.deepseek.com" // 默认值
+	// 获取LLM基础URL
+	config.LLMBaseURL = os.Getenv("LLM_BASE_URL")
+	if config.LLMBaseURL == "" {
+		// 根据提供商设置默认URL
+		switch config.LLMProvider {
+		case "deepseek":
+			config.LLMBaseURL = "https://api.deepseek.com"
+		case "moonshot":
+			config.LLMBaseURL = "https://api.moonshot.cn/v1"
+		default:
+			return nil, errors.New("不支持的LLM提供商: " + config.LLMProvider)
+		}
+	}
+
+	// 获取LLM模型名称
+	config.LLMModel = os.Getenv("LLM_MODEL")
+	if config.LLMModel == "" {
+		// 根据提供商设置默认模型
+		switch config.LLMProvider {
+		case "deepseek":
+			config.LLMModel = "deepseek-chat"
+		case "moonshot":
+			config.LLMModel = "kimi-k2-0711-preview"
+		default:
+			return nil, errors.New("不支持的LLM提供商: " + config.LLMProvider)
+		}
 	}
 
 	// 获取是否使用本地模型
@@ -213,4 +253,4 @@ DANGEROUS_COMMANDS=rm -rf,rm,chmod,chown,mkfs,dd,mv,reboot,shutdown
 	}
 
 	return config, nil
-} 
+}

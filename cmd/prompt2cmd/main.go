@@ -9,7 +9,9 @@ import (
 
 	"github.com/elecmonkey/prompt2cmd/internal/config"
 	"github.com/elecmonkey/prompt2cmd/internal/history"
+	"github.com/elecmonkey/prompt2cmd/internal/llm"
 	"github.com/elecmonkey/prompt2cmd/internal/llm/deepseek"
+	"github.com/elecmonkey/prompt2cmd/internal/llm/moonshot"
 	"github.com/elecmonkey/prompt2cmd/internal/processor"
 	"github.com/elecmonkey/prompt2cmd/internal/security"
 	"github.com/elecmonkey/prompt2cmd/internal/ui"
@@ -41,7 +43,16 @@ func main() {
 	}
 
 	// 初始化 LLM 提供商
-	llmProvider := deepseek.NewProvider(cfg)
+    var llmProvider llm.Provider
+    switch cfg.LLMProvider {
+    case "deepseek":
+        llmProvider = deepseek.NewProvider(cfg)
+    case "moonshot":
+        llmProvider = moonshot.NewProvider(cfg)
+    default:
+        fmt.Printf("❌ 不支持的LLM提供商: %s\n", cfg.LLMProvider)
+        os.Exit(1)
+    }
 
 	// 初始化命令处理器
 	cmdProcessor := processor.NewOSCommandProcessor()

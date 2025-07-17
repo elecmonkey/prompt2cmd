@@ -1,4 +1,4 @@
-package deepseek
+package moonshot
 
 import (
 	"bytes"
@@ -17,14 +17,14 @@ import (
 	"github.com/elecmonkey/prompt2cmd/internal/llm"
 )
 
-// Provider 实现DeepSeek API的LLM提供商
+// Provider 实现Moonshot API的LLM提供商
 type Provider struct {
 	APIKey  string
 	BaseURL string
 	Model   string
 }
 
-// NewProvider 创建一个新的DeepSeek API提供商
+// NewProvider 创建一个新的Moonshot API提供商
 func NewProvider(cfg *config.Config) *Provider {
 	return &Provider{
 		APIKey:  cfg.LLMAPIKey,
@@ -95,7 +95,7 @@ func (p *Provider) GenerateCommand(prompt string, historyRecords []history.Histo
 		Content: enhancedPrompt,
 	})
 
-	// 转换消息格式为map，以适应DeepSeek API的要求
+	// 转换消息格式为map，以适应Moonshot API的要求
 	messagesMaps := make([]map[string]string, len(messages))
 	for i, msg := range messages {
 		messagesMaps[i] = map[string]string{
@@ -346,7 +346,7 @@ func buildSystemPrompt(currentPath string) string {
 	// 4. 删除文件：Remove-Item file.txt 或 del file.txt
 	// 5. 创建目录：New-Item -ItemType Directory -Name newdir 或 mkdir newdir
 	// 6. 查找文本：Select-String -Pattern "text" -Path file.txt 或 findstr "text" file.txt
-	// 7. 路径使用反斜杠或正斜杠：C:\\Users\\username\\Documents 或 C:/Users/username/Documents
+	// 7. 路径使用反斜杠或正斜杠：C:\Users\username\Documents 或 C:/Users/username/Documents
 	// 8. 环境变量使用$前缀：$env:USERPROFILE
 	// 9. 管道操作使用 | 符号：Get-Process | Where-Object { $_.CPU -gt 10 }
 	// 10. 条件语句：if ($true) { "True" } else { "False" }
@@ -405,7 +405,7 @@ Linux系统命令示例：
 通用示例：
 用户需求："列出当前目录下的所有图片文件"
 {
-  "command": "find . -type f -name \"*.jpg\" -o -name \"*.png\" -o -name \"*.gif\"",
+  "command": "find . -type f -name \"*.jpg\" -o -name \"*.png\" -o -name \"*.gif\",
   "explanation": "查找当前目录及其子目录下所有.jpg、.png和.gif格式的图片文件。"
 }
 
